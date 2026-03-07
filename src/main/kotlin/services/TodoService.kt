@@ -25,13 +25,23 @@ class TodoService(
     private val userRepo: IUserRepository,
     private val todoRepo: ITodoRepository
 ) {
-    // Mengambil semua daftar todo saya
+    // Mengambil semua daftar todo saya dengan Pagination dan Filter
     suspend fun getAll(call: ApplicationCall) {
         val user = ServiceHelper.getAuthUser(call, userRepo)
 
+        // Parameter pencarian yang sudah ada
         val search = call.request.queryParameters["search"] ?: ""
 
-        val todos = todoRepo.getAll(user.id, search)
+        // TAMBAHAN: Parameter Pagination sesuai instruksi (default 10 data)
+        val page = call.request.queryParameters["page"]?.toInt() ?: 1
+        val perPage = call.request.queryParameters["perPage"]?.toInt() ?: 10
+
+        // TAMBAHAN: Parameter Filter Status dan Urgency
+        val status = call.request.queryParameters["status"] // misal: "done" atau "undone"
+        val urgency = call.request.queryParameters["urgency"] // misal: "Low", "Medium", "High"
+
+        // Memanggil repo dengan parameter lengkap untuk optimasi resource
+        val todos = todoRepo.getAll(user.id, search, page, perPage, status, urgency)
 
         val response = DataResponse(
             "success",
@@ -118,6 +128,8 @@ class TodoService(
         request.title = oldTodo.title
         request.description = oldTodo.description
         request.isDone = oldTodo.isDone
+        // TAMBAHAN: Pastikan nilai urgency tetap terjaga saat ganti cover
+        request.urgency = oldTodo.urgency
 
         val isUpdated = todoRepo.update(
             user.id,
@@ -144,7 +156,7 @@ class TodoService(
         call.respond(response)
     }
 
-    // Menambahkan data todo
+    // Menambahkan data todo dengan Urgency Level
     suspend fun post(call: ApplicationCall) {
         val user = ServiceHelper.getAuthUser(call, userRepo)
 
@@ -156,6 +168,8 @@ class TodoService(
         val validator = ValidatorHelper(request.toMap())
         validator.required("title", "Judul todo tidak boleh kosong")
         validator.required("description", "Deskripsi tidak boleh kosong")
+        // TAMBAHAN: Validasi urgency sesuai ketentuan praktikum
+        validator.required("urgency", "Tingkat urgensi tidak boleh kosong")
         validator.validate()
 
         // Tambahkan todo
@@ -171,7 +185,7 @@ class TodoService(
         call.respond(response)
     }
 
-    // Mengubah data todo
+    // Mengubah data todo termasuk Urgency Level
     suspend fun put(call: ApplicationCall) {
         val todoId = call.parameters["id"]
             ?: throw AppException(400, "Data todo tidak valid!")
@@ -187,6 +201,8 @@ class TodoService(
         validator.required("title", "Judul todo tidak boleh kosong")
         validator.required("description", "Deskripsi tidak boleh kosong")
         validator.required("isDone", "Status selesai tidak boleh kosong")
+        // TAMBAHAN: Validasi urgency level
+        validator.required("urgency", "Tingkat urgensi tidak boleh kosong")
         validator.validate()
 
         val oldTodo = todoRepo.getById(todoId)

@@ -15,6 +15,9 @@ data class Todo(
     var isDone: Boolean = false,
     var cover: String?,
 
+    // TAMBAHKAN INI: Untuk fitur level urgensi (Low, Medium, High)
+    var urgency: String = "Low",
+
     @Contextual
     val createdAt: Instant = Clock.System.now(),
     @Contextual

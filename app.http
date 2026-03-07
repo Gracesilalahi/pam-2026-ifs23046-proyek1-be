@@ -1,20 +1,21 @@
 ## Global Variabel
-#@BaseUrl = https://pam-2026-p5-ifs23046-be.delcom.org:8080
-@BaseUrl = http://127.0.0.1:8000
+@BaseUrl = https://pam-2026-p5-ifs23046-be.s1if.life:8080/
+#@BaseUrl = http://127.0.0.1:8000
 
 ### ---------------------------------------
 ## Auth
 ### ---------------------------------------
 
 ### Melakukan pendaftaran
+
 # @name PostRegister
 POST {{BaseUrl}}/auth/register
 Content-Type: application/json
 
 {
-  "name": "Tester",
-  "username": "tester",
-  "password": "tester"
+"name": "Tester",
+"username": "tester",
+"password": "tester"
 }
 
 ### Masuk ke layanan
@@ -106,7 +107,7 @@ Content-Type: image/png
 --WebAppBoundary--
 
 ### Mengambil data tumbuhan berdasarkan id-nya
-@userId = 00ed9d33-61b0-48b7-a32a-6510af028731
+@userId = 7ad9468c-f1c6-4a02-872c-89dd789a72f7
 
 # @name GetMyPhoto
 GET {{BaseUrl}}/images/users/{{userId}}
