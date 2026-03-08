@@ -11,9 +11,8 @@ data class TodoRequest(
     var title: String = "",
     var description: String = "",
     var cover: String? = null,
+    var urgency: String = "Low",
     var isDone: Boolean = false,
-    // TAMBAHKAN INI: Untuk menangkap tingkat urgensi dari JSON
-    var urgency: String = "Low"
 ){
     fun toMap(): Map<String, Any?> {
         return mapOf(
@@ -21,21 +20,20 @@ data class TodoRequest(
             "title" to title,
             "description" to description,
             "cover" to cover,
+            "urgency" to urgency,
             "isDone" to isDone,
-            // TAMBAHKAN INI: Agar validator bisa mengecek field urgency
-            "urgency" to urgency
         )
     }
 
     fun toEntity(): Todo {
         return Todo(
+            // Pastikan data class Todo (Entity) kamu juga sudah ada field urgency
             userId = userId,
             title = title,
             description = description,
             cover = cover,
-            isDone = isDone,
-            // TAMBAHKAN INI: Memastikan data diteruskan ke objek Entity
             urgency = urgency,
+            isDone = isDone,
             updatedAt = Clock.System.now()
         )
     }

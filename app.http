@@ -7,15 +7,14 @@
 ### ---------------------------------------
 
 ### Melakukan pendaftaran
-
 # @name PostRegister
 POST {{BaseUrl}}/auth/register
 Content-Type: application/json
 
 {
-"name": "Tester",
-"username": "tester",
-"password": "tester"
+  "name": "grace",
+  "username": "grace",
+  "password": "grace"
 }
 
 ### Masuk ke layanan
@@ -24,8 +23,8 @@ POST {{BaseUrl}}/auth/login
 Content-Type: application/json
 
 {
-  "username": "tester",
-  "password": "tester"
+  "username": "grace",
+  "password": "grace"
 }
 
 > {%
@@ -78,8 +77,9 @@ Authorization: Bearer {{authToken}}
 Content-Type: application/json
 
 {
-  "name": "Tester Update",
-  "username": "tester"
+  "name": "grace",
+  "username": "grace",
+  "about": "grace"
 }
 
 ### Mengubah kata sandi akun
@@ -89,8 +89,8 @@ Authorization: Bearer {{authToken}}
 Content-Type: application/json
 
 {
-  "newPassword": "tester",
-  "password": "tester"
+  "newPassword": "grace",
+  "password": "grace"
 }
 
 ### Mengubah photo profile
@@ -107,7 +107,7 @@ Content-Type: image/png
 --WebAppBoundary--
 
 ### Mengambil data tumbuhan berdasarkan id-nya
-@userId = 7ad9468c-f1c6-4a02-872c-89dd789a72f7
+#@userId = 00ed9d33-61b0-48b7-a32a-6510af028731
 
 # @name GetMyPhoto
 GET {{BaseUrl}}/images/users/{{userId}}
@@ -118,24 +118,27 @@ Content-Type: application/json
 ## Todos
 ### ---------------------------------------
 
-### Mengambil semua data todo user saat ini
+### Mengambil data todo dengan Pagination dan Filter
+# Parameter: page, perPage, is_finished (true/false), urgency (Low/Medium/High)
 # @name GetTodos
-GET {{BaseUrl}}/todos?search=
+GET {{BaseUrl}}/todos?page=1&perPage=10&is_finished=false&urgency=High&search=
 Authorization: Bearer {{authToken}}
 Content-Type: application/json
 
-### Menambahkan todo
+### Menambahkan todo dengan Urgency
 # @name PostTodos
 POST {{BaseUrl}}/todos
 Authorization: Bearer {{authToken}}
 Content-Type: application/json
 
 {
-  "title": "Judul Todo",
-  "description": "Deskripsi Todo"
+  "title": "Mengerjakan Praktikum PAM",
+  "description": "Menyelesaikan modul 5 authentication",
+  "urgency": "High"
 }
 
 > {%
+    // Script ini mengambil todoId dari response data dan menyimpannya ke variabel global
     client.global.set("todoId", response.body.data.todoId);
 %}
 
@@ -145,15 +148,16 @@ GET {{BaseUrl}}/todos/{{todoId}}
 Authorization: Bearer {{authToken}}
 Content-Type: application/json
 
-### Mengubah todo
+### Mengubah todo (termasuk status dan urgency)
 # @name PutTodo
 PUT {{BaseUrl}}/todos/{{todoId}}
 Authorization: Bearer {{authToken}}
 Content-Type: application/json
 
 {
-  "title": "Judul Todo",
-  "description": "Deskripsi Todo",
+  "title": "Mengerjakan Praktikum PAM",
+  "description": "Menyelesaikan modul 5 authentication",
+  "urgency": "Medium",
   "isDone": true
 }
 
@@ -169,6 +173,12 @@ Content-Type: image/png
 
 < ./uploads/examples/me.png
 --WebAppBoundary--
+
+### Mengambil statistik todo (Total, Selesai, Belum Selesai)
+# @name GetTodoStats
+GET {{BaseUrl}}/todos/stats
+Authorization: Bearer {{authToken}}
+Content-Type: application/json
 
 ### Mengambil cover todo
 # @name GetTodoCover

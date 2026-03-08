@@ -21,10 +21,8 @@ fun Application.configureRouting() {
     val userService: UserService by inject()
 
     install(StatusPages) {
-        // Tangkap AppException
         exception<AppException> { call, cause ->
             val dataMap: Map<String, List<String>> = parseMessageToMap(cause.message)
-
             call.respond(
                 status = HttpStatusCode.fromValue(cause.code),
                 message = ErrorResponse(
@@ -35,7 +33,6 @@ fun Application.configureRouting() {
             )
         }
 
-        // Tangkap semua Throwable lainnya
         exception<Throwable> { call, cause ->
             call.respond(
                 status = HttpStatusCode.fromValue(500),
@@ -50,75 +47,55 @@ fun Application.configureRouting() {
 
     routing {
         get("/") {
-            call.respondText("API telah berjalan. Dibuat oleh Grace Sania.")
+            call.respondText("API Berjalan - Versi Baru Grace Jam 13:00")
         }
 
-        // Route Auth
         route("/auth") {
-            post("/login") {
-                authService.postLogin(call)
-            }
-            post("/register") {
-                authService.postRegister(call)
-            }
-            post("/refresh-token") {
-                authService.postRefreshToken(call)
-            }
-
-            post("/logout") {
-                authService.postLogout(call)
-            }
+            post("/login") { authService.postLogin(call) }
+            post("/register") { authService.postRegister(call) }
+            post("/refresh-token") { authService.postRefreshToken(call) }
+            post("/logout") { authService.postLogout(call) }
         }
 
         authenticate(JWTConstants.NAME) {
-            // Route User
             route("/users") {
-                get("/me") {
-                    userService.getMe(call)
-                }
-                put("/me") {
-                    userService.putMe(call)
-                }
-                put("/me/password") {
-                    userService.putMyPassword(call)
-                }
-                put("/me/photo") {
-                    userService.putMyPhoto(call)
-                }
+                get("/me") { userService.getMe(call) }
+                put("/me") { userService.putMe(call) }
+                put("/me/password") { userService.putMyPassword(call) }
+                put("/me/photo") { userService.putMyPhoto(call) }
             }
 
-            // Route Todos
             route("/todos") {
-                get {
-                    todoService.getAll(call)
+                // 1. Tetap letakkan stats di atas sebagai formalitas
+                get("/stats") {
+                    todoService.getStats(call)
                 }
-                post {
-                    todoService.post(call)
-                }
+
+                get { todoService.getAll(call) }
+                post { todoService.post(call) }
+
+                // 2. Modifikasi rute ID agar bisa menangani kata "stats" secara manual
                 get("/{id}") {
-                    todoService.getById(call)
+                    val id = call.parameters["id"]
+
+                    if (id == "stats") {
+                        // Jika Ktor salah masuk ke sini, kita paksa jalankan fungsi stats
+                        todoService.getStats(call)
+                    } else {
+                        // Jika memang berupa ID, baru jalankan getById
+                        todoService.getById(call)
+                    }
                 }
-                put("/{id}") {
-                    todoService.put(call)
-                }
-                put("/{id}/cover") {
-                    todoService.putCover(call)
-                }
-                delete("/{id}") {
-                    todoService.delete(call)
-                }
+
+                put("/{id}") { todoService.put(call) }
+                put("/{id}/cover") { todoService.putCover(call) }
+                delete("/{id}") { todoService.delete(call) }
             }
         }
 
         route("/images") {
-            get("users/{id}") {
-                userService.getPhoto(call)
-            }
-
-            get("todos/{id}") {
-                todoService.getCover(call)
-            }
+            get("users/{id}") { userService.getPhoto(call) }
+            get("todos/{id}") { todoService.getCover(call) }
         }
-
     }
 }

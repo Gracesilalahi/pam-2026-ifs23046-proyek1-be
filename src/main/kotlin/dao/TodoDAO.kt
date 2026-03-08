@@ -14,11 +14,8 @@ class TodoDAO(id: EntityID<UUID>) : Entity<UUID>(id) {
     var title by TodoTable.title
     var description by TodoTable.description
     var cover by TodoTable.cover
-    var isDone by TodoTable.isDone
-
-    // TAMBAHKAN INI: Agar DAO bisa mengakses kolom urgency di database
     var urgency by TodoTable.urgency
-
+    var isDone by TodoTable.isDone
     var createdAt by TodoTable.createdAt
     var updatedAt by TodoTable.updatedAt
 }

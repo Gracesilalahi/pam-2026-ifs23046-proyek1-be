@@ -7,64 +7,69 @@ import org.delcom.helpers.todoDAOToModel
 import org.delcom.tables.TodoTable
 import org.jetbrains.exposed.sql.*
 import org.jetbrains.exposed.sql.SqlExpressionBuilder.eq
+import org.jetbrains.exposed.sql.SqlExpressionBuilder.like
 import java.util.*
 
 class TodoRepository : ITodoRepository {
-    // 1. Update fungsi getAll dengan parameter Pagination & Filter
+
+    // 1. Mengambil semua data dengan Pagination, Search, dan Filter
     override suspend fun getAll(
         userId: String,
         search: String,
         page: Int,
         perPage: Int,
-        status: String?,
+        isDone: Boolean?,
         urgency: String?
     ): List<Todo> = suspendTransaction {
-        // Logic Pagination
-        val offset = ((page - 1) * perPage).toLong()
+        val userUUID = UUID.fromString(userId)
+        val offsetValue = (page - 1).toLong() * perPage
 
-        // Membangun Query
-        val query = TodoDAO.find {
-            val conditions = (TodoTable.userId eq UUID.fromString(userId))
+        // Query dasar berdasarkan User ID
+        val query = TodoTable.selectAll().where { TodoTable.userId eq userUUID }
 
-            // Tambahkan filter pencarian (Lower Case)
-            val searchCondition = if (search.isNotBlank()) {
-                val keyword = "%${search.lowercase()}%"
-                (TodoTable.title.lowerCase() like keyword) or (TodoTable.description.lowerCase() like keyword)
-            } else null
-
-            // Tambahkan filter status
-            val statusCondition = when (status) {
-                "done" -> (TodoTable.isDone eq true)
-                "undone" -> (TodoTable.isDone eq false)
-                else -> null
-            }
-
-            // Tambahkan filter urgency
-            val urgencyCondition = if (!urgency.isNullOrEmpty()) {
-                (TodoTable.urgency eq urgency)
-            } else null
-
-            // Gabungkan semua kondisi
-            listOfNotNull(conditions, searchCondition, statusCondition, urgencyCondition)
-                .reduce { acc, op -> acc and op }
+        // Filter Search (Judul)
+        if (search.isNotBlank()) {
+            val keyword = "%${search.lowercase()}%"
+            query.andWhere { TodoTable.title.lowerCase() like keyword }
         }
 
-        // PERBAIKAN: Pisahkan limit dan offset untuk menghindari deprecation error
-        // Pastikan orderBy diletakkan sebelum limit/offset
-        query.orderBy(TodoTable.createdAt to SortOrder.DESC)
+        // Filter Status Selesai
+        if (isDone != null) {
+            query.andWhere { TodoTable.isDone eq isDone }
+        }
+
+        // Filter Level Urgensi
+        if (urgency != null) {
+            query.andWhere { TodoTable.urgency eq urgency }
+        }
+
+        // Eksekusi dengan memisahkan .limit() dan .offset() untuk menghindari deprecation
+        TodoDAO.wrapRows(query)
+            .orderBy(TodoTable.createdAt to SortOrder.DESC)
             .limit(perPage)
-            .offset(offset)
+            .offset(offsetValue)
             .map(::todoDAOToModel)
     }
 
+    // 2. Mengambil Statistik untuk Halaman Home
+    override suspend fun getStats(userId: String): Map<String, Long> = suspendTransaction {
+        val userUUID = UUID.fromString(userId)
+
+        val total = TodoTable.selectAll().where { TodoTable.userId eq userUUID }.count()
+        val finished = TodoTable.selectAll().where {
+            (TodoTable.userId eq userUUID) and (TodoTable.isDone eq true)
+        }.count()
+        val unfinished = total - finished
+
+        mapOf(
+            "total" to total,
+            "finished" to finished,
+            "unfinished" to unfinished
+        )
+    }
+
     override suspend fun getById(todoId: String): Todo? = suspendTransaction {
-        TodoDAO
-            .find {
-                (TodoTable.id eq UUID.fromString(todoId))
-            }
-            .limit(1)
-            .map(::todoDAOToModel)
-            .firstOrNull()
+        TodoDAO.findById(UUID.fromString(todoId))?.let(::todoDAOToModel)
     }
 
     override suspend fun create(todo: Todo): String = suspendTransaction {
@@ -73,13 +78,11 @@ class TodoRepository : ITodoRepository {
             title = todo.title
             description = todo.description
             cover = todo.cover
-            isDone = todo.isDone
-            // Tetap simpan tingkat urgensi ke database
             urgency = todo.urgency
+            isDone = todo.isDone
             createdAt = todo.createdAt
             updatedAt = todo.updatedAt
         }
-
         todoDAO.id.value.toString()
     }
 
@@ -96,9 +99,8 @@ class TodoRepository : ITodoRepository {
             todoDAO.title = newTodo.title
             todoDAO.description = newTodo.description
             todoDAO.cover = newTodo.cover
-            todoDAO.isDone = newTodo.isDone
-            // Tetap perbarui tingkat urgensi
             todoDAO.urgency = newTodo.urgency
+            todoDAO.isDone = newTodo.isDone
             todoDAO.updatedAt = newTodo.updatedAt
             true
         } else {

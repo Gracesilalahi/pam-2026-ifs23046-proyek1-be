@@ -14,8 +14,6 @@ data class Todo(
     var description: String,
     var isDone: Boolean = false,
     var cover: String?,
-
-    // TAMBAHKAN INI: Untuk fitur level urgensi (Low, Medium, High)
     var urgency: String = "Low",
 
     @Contextual
