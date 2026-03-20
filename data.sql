@@ -1,30 +1,33 @@
+-- 1. Aktifkan ekstensi UUID (agar Postgres bisa generate ID otomatis jika perlu)
+CREATE EXTENSION IF NOT EXISTS "uuid-ossp";
+
+-- 2. Tabel Users (Pondasi utama)
 CREATE TABLE IF NOT EXISTS users (
-                                     id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-    name VARCHAR(100) NOT NULL,
-    username VARCHAR(50) NOT NULL,
+                                     id UUID PRIMARY KEY,
+                                     username VARCHAR(50) UNIQUE NOT NULL,
     password VARCHAR(255) NOT NULL,
-    photo VARCHAR(255) NULL,
-    about TEXT NULL,
-    created_at TIMESTAMP NOT NULL,
-    updated_at TIMESTAMP NOT NULL
+    name VARCHAR(100) NOT NULL,
+    about TEXT
     );
 
+-- 3. Tabel Refresh Tokens (Untuk sesi login)
 CREATE TABLE IF NOT EXISTS refresh_tokens (
-                                              id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-    user_id UUID NOT NULL REFERENCES users(id) ON DELETE CASCADE,
-    refresh_token TEXT NOT NULL,
-    auth_token TEXT NOT NULL,
-    created_at TIMESTAMP NOT NULL
+                                              id UUID PRIMARY KEY,
+                                              token VARCHAR(500) NOT NULL,
+    user_id UUID NOT NULL,
+    expiry_date TIMESTAMP NOT NULL,
+    CONSTRAINT fk_user_token FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE
     );
 
-CREATE TABLE IF NOT EXISTS todos (
-                                     id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-    user_id UUID NOT NULL REFERENCES users(id) ON DELETE CASCADE,
-    title VARCHAR(100) NOT NULL,
-    description TEXT NOT NULL,
-    urgency VARCHAR(10) NOT NULL DEFAULT 'Low',
-    is_done BOOLEAN NOT NULL DEFAULT FALSE,
-    cover TEXT NULL,
-    created_at TIMESTAMP NOT NULL,
-    updated_at TIMESTAMP NOT NULL
+-- 4. Tabel Wardrobes (Koleksi baju Digital Wardrobe kamu)
+CREATE TABLE IF NOT EXISTS wardrobes (
+                                         id UUID PRIMARY KEY,
+                                         user_id UUID NOT NULL,
+                                         name VARCHAR(100) NOT NULL,
+    category VARCHAR(50) NOT NULL, -- Nanti isinya: TOP, BOTTOM, shoes, dll.
+    color VARCHAR(50),
+    image_path VARCHAR(255),
+    description TEXT,
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    CONSTRAINT fk_user_wardrobe FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE
     );

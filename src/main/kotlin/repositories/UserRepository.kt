@@ -5,56 +5,43 @@ import org.delcom.entities.User
 import org.delcom.helpers.suspendTransaction
 import org.delcom.helpers.userDAOToModel
 import org.delcom.tables.UserTable
+import org.jetbrains.exposed.sql.*
 import org.jetbrains.exposed.sql.SqlExpressionBuilder.eq
-import org.jetbrains.exposed.sql.deleteWhere
-import java.util.*
+import java.util.UUID
 
 class UserRepository : IUserRepository {
-    override suspend fun getById(userId: String): User? = suspendTransaction {
-        UserDAO.findById(UUID.fromString(userId))?.let(::userDAOToModel)
+    override suspend fun getByUsername(username: String): User? = suspendTransaction {
+        UserDAO.find { UserTable.username eq username }.firstOrNull()?.let { userDAOToModel(it) }
     }
 
-    override suspend fun getByUsername(username: String): User? = suspendTransaction {
-        UserDAO.find { (UserTable.username eq username) }
-            .limit(1)
-            .map(::userDAOToModel)
-            .firstOrNull()
+    override suspend fun getById(id: String): User? = suspendTransaction {
+        try {
+            UserDAO.findById(UUID.fromString(id))?.let { userDAOToModel(it) }
+        } catch (e: Exception) { null }
     }
 
     override suspend fun create(user: User): String = suspendTransaction {
-        val userDAO = UserDAO.new {
-            name = user.name
-            username = user.username
-            password = user.password
-            photo = user.photo // Tambahkan ini
-            about = user.about // Tambahkan ini agar sinkron dengan fitur baru
-            createdAt = user.createdAt
-            updatedAt = user.updatedAt
+        UserTable.insert {
+            it[id] = UUID.fromString(user.id)
+            it[username] = user.username
+            it[password] = user.password
+            it[name] = user.name
+            it[about] = user.about
         }
-
-        userDAO.id.value.toString()
+        user.id
     }
 
-    override suspend fun update(id: String, newUser: User): Boolean = suspendTransaction {
-        val userDAO = UserDAO.findById(UUID.fromString(id))
-
-        if (userDAO != null) {
-            userDAO.name = newUser.name
-            userDAO.username = newUser.username
-            userDAO.password = newUser.password
-            userDAO.photo = newUser.photo
-            userDAO.about = newUser.about // Tambahkan ini untuk update informasi profil
-            userDAO.updatedAt = newUser.updatedAt
-            true
-        } else {
-            false
+    override suspend fun update(id: String, user: User): Boolean = suspendTransaction {
+        val affectedRows = UserTable.update({ UserTable.id eq UUID.fromString(id) }) {
+            it[name] = user.name
+            it[username] = user.username
+            it[password] = user.password
+            it[about] = user.about
         }
+        affectedRows > 0
     }
 
     override suspend fun delete(id: String): Boolean = suspendTransaction {
-        val rowsDeleted = UserTable.deleteWhere {
-            UserTable.id eq UUID.fromString(id)
-        }
-        rowsDeleted >= 1
+        UserTable.deleteWhere { UserTable.id eq UUID.fromString(id) } > 0
     }
 }

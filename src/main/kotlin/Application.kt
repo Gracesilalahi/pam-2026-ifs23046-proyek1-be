@@ -1,7 +1,5 @@
 package org.delcom
 
-import com.auth0.jwt.JWT
-import com.auth0.jwt.algorithms.Algorithm
 import io.github.cdimascio.dotenv.dotenv
 import io.ktor.http.*
 import io.ktor.serialization.kotlinx.json.*
@@ -16,77 +14,68 @@ import kotlinx.serialization.json.Json
 import org.delcom.helpers.JWTConstants
 import org.delcom.helpers.configureDatabases
 import org.delcom.module.appModule
+import org.delcom.plugins.configureStatusPages
+import org.delcom.services.AuthService
+import org.delcom.services.UserService
+import org.delcom.services.WardrobeService
+import org.koin.ktor.ext.inject
 import org.koin.ktor.plugin.Koin
+import com.auth0.jwt.JWT
+import com.auth0.jwt.algorithms.Algorithm
 
 fun main(args: Array<String>) {
     val dotenv = dotenv {
         directory = "."
         ignoreIfMissing = false
     }
-
-    dotenv.entries().forEach {
-        System.setProperty(it.key, it.value)
-    }
-
+    dotenv.entries().forEach { System.setProperty(it.key, it.value) }
     EngineMain.main(args)
 }
 
 fun Application.module() {
-
     val jwtSecret = environment.config.property("ktor.jwt.secret").getString()
+
+    // 1. PASANG KOIN TERLEBIH DAHULU
+    install(Koin) {
+        modules(appModule(jwtSecret))
+    }
+
+    // 2. BARU AMBIL SERVICE (Inject)
+    val authService by inject<AuthService>()
+    val userService by inject<UserService>()
+    val wardrobeService by inject<WardrobeService>()
+
+    configureStatusPages()
 
     install(Authentication) {
         jwt(JWTConstants.NAME) {
             realm = JWTConstants.REALM
-
             verifier(
-                JWT
-                    .require(Algorithm.HMAC256(jwtSecret))
+                JWT.require(Algorithm.HMAC256(jwtSecret))
                     .withIssuer(JWTConstants.ISSUER)
                     .withAudience(JWTConstants.AUDIENCE)
                     .build()
             )
-
             validate { credential ->
-                val userId = credential.payload
-                    .getClaim("userId")
-                    .asString()
-
-                if (!userId.isNullOrBlank())
-                    JWTPrincipal(credential.payload)
-                else null
+                val userId = credential.payload.getClaim("userId").asString()
+                if (!userId.isNullOrBlank()) JWTPrincipal(credential.payload) else null
             }
-
             challenge { _, _ ->
-                call.respond(
-                    HttpStatusCode.Unauthorized,
-                    mapOf(
-                        "status" to "error",
-                        "message" to "Token tidak valid"
-                    )
-                )
+                call.respond(HttpStatusCode.Unauthorized, mapOf("status" to "error", "message" to "Token tidak valid"))
             }
         }
     }
 
     install(CORS) {
         anyHost()
+        allowHeader(HttpHeaders.ContentType)
+        allowHeader(HttpHeaders.Authorization)
     }
 
     install(ContentNegotiation) {
-        json(
-            Json {
-                explicitNulls = false
-                prettyPrint = true
-                ignoreUnknownKeys = true
-            }
-        )
-    }
-
-    install(Koin) {
-        modules(appModule(jwtSecret))
+        json(Json { explicitNulls = false; prettyPrint = true; ignoreUnknownKeys = true })
     }
 
     configureDatabases()
-    configureRouting()
+    configureRouting(authService, userService, wardrobeService)
 }
