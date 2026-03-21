@@ -1,8 +1,8 @@
-@file:Suppress("DEPRECATION", "REMOVE_ITERABLE_LIMIT")
+@file:Suppress("DEPRECATION")
 
 package org.delcom.repositories
 
-import org.delcom.tables.WardrobeTable
+import org.delcom.entities.WardrobeTable
 import org.delcom.entities.WardrobeItem
 import org.delcom.entities.WardrobeCategory
 import org.jetbrains.exposed.sql.*
@@ -16,10 +16,10 @@ class WardrobeRepository : IWardrobeRepository {
             it[id] = item.id
             it[WardrobeTable.userId] = userId
             it[name] = item.name
-            it[category] = item.category.name
-            it[color] = item.color
-            it[imagePath] = item.imagePath
-            it[description] = item.description
+            it[category] = item.category
+            it[color] = item.color ?: ""
+            it[imagePath] = item.imagePath ?: ""
+            it[description] = item.description ?: ""
         }
         1
     }
@@ -33,19 +33,20 @@ class WardrobeRepository : IWardrobeRepository {
         }
 
         if (!category.isNullOrBlank()) {
-            query = query.andWhere { WardrobeTable.category eq category }
+            try {
+                val catEnum = WardrobeCategory.valueOf(category.uppercase())
+                query = query.andWhere { WardrobeTable.category eq catEnum }
+            } catch (e: Exception) { }
         }
 
         val sortCol = if (sortBy == "name") WardrobeTable.name else WardrobeTable.createdAt
         val sortOrd = if (order.lowercase() == "asc") SortOrder.ASC else SortOrder.DESC
 
-        // --- TRIK KHUSUS: Ambil data dulu, baru dipotong manual agar tidak butuh .limit() ---
+        // --- FIX DEPRECATION DISINI ---
         query.orderBy(sortCol to sortOrd)
-            .asSequence() // Ubah jadi sequence agar hemat memori
-            .drop(offset.toInt())
-            .take(limit)
+            .limit(limit)
+            .offset(offset)
             .map { toDomain(it) }
-            .toList()
     }
 
     override suspend fun findByIdAndUserId(id: String, userId: String): WardrobeItem? = suspendTransaction {
@@ -60,16 +61,21 @@ class WardrobeRepository : IWardrobeRepository {
             val searchTerm = "%${search.lowercase()}%"
             query = query.andWhere { WardrobeTable.name.lowerCase() like searchTerm }
         }
-        if (!category.isNullOrBlank()) query = query.andWhere { WardrobeTable.category eq category }
+        if (!category.isNullOrBlank()) {
+            try {
+                val catEnum = WardrobeCategory.valueOf(category.uppercase())
+                query = query.andWhere { WardrobeTable.category eq catEnum }
+            } catch (e: Exception) { }
+        }
         query.count()
     }
 
     override suspend fun update(id: String, userId: String, item: WardrobeItem): Int = suspendTransaction {
         WardrobeTable.update({ (WardrobeTable.id eq id) and (WardrobeTable.userId eq userId) }) {
             it[name] = item.name
-            it[category] = item.category.name
-            it[color] = item.color
-            it[description] = item.description
+            it[category] = item.category
+            it[color] = item.color ?: ""
+            it[description] = item.description ?: ""
             if (item.imagePath != null) it[imagePath] = item.imagePath
         }
     }
@@ -81,7 +87,7 @@ class WardrobeRepository : IWardrobeRepository {
     private fun toDomain(row: ResultRow) = WardrobeItem(
         id = row[WardrobeTable.id],
         name = row[WardrobeTable.name],
-        category = WardrobeCategory.valueOf(row[WardrobeTable.category]),
+        category = row[WardrobeTable.category],
         color = row[WardrobeTable.color],
         imagePath = row[WardrobeTable.imagePath],
         description = row[WardrobeTable.description],

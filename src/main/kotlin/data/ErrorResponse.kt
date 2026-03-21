@@ -3,8 +3,8 @@ package org.delcom.data
 import kotlinx.serialization.Serializable
 
 @Serializable
-data class BaseResponse<T>(
-    val status: String,
+data class ErrorResponse(
+    val errorCode: String,
     val message: String,
-    val data: T? = null
+    val timestamp: String
 )

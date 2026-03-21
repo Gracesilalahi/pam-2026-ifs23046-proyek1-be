@@ -6,6 +6,6 @@ import kotlinx.serialization.Serializable
 data class WardrobeRequest(
     val name: String,
     val category: String,
-    val color: String,
+    val color: String? = null,
     val description: String? = null
 )

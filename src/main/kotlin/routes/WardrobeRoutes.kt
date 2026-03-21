@@ -1,7 +1,6 @@
 package org.delcom.routes
 
 import io.ktor.http.*
-import io.ktor.http.content.*
 import io.ktor.server.application.*
 import io.ktor.server.auth.*
 import io.ktor.server.request.*
@@ -9,7 +8,6 @@ import io.ktor.server.response.*
 import io.ktor.server.routing.*
 import org.delcom.data.WardrobeRequest
 import org.delcom.services.WardrobeService
-import org.delcom.helpers.FileHelper
 import org.delcom.helpers.SecurityHelper
 import org.delcom.helpers.JWTConstants
 
@@ -17,32 +15,21 @@ fun Route.wardrobeRoutes(service: WardrobeService) {
     authenticate(JWTConstants.NAME) {
         route("/wardrobe") {
 
-            // 1. Tambah Baju (Multipart/Upload)
+            // 1. Tambah Baju (Versi JSON)
             post {
-                val userId = SecurityHelper.extractUserId(call) ?: return@post call.respond(HttpStatusCode.Unauthorized)
+                try {
+                    val userId = SecurityHelper.extractUserId(call)
+                        ?: return@post call.respond(HttpStatusCode.Unauthorized)
 
-                var name = ""; var category = ""; var color = ""; var description: String? = null; var fileName: String? = null
-                val multipart = call.receiveMultipart()
+                    // Membaca body sebagai JSON WardrobeRequest
+                    val request = call.receive<WardrobeRequest>()
 
-                multipart.forEachPart { part ->
-                    when (part) {
-                        is PartData.FormItem -> {
-                            when (part.name) {
-                                "name" -> name = part.value
-                                "category" -> category = part.value
-                                "color" -> color = part.value
-                                "description" -> description = part.value
-                            }
-                        }
-                        is PartData.FileItem -> {
-                            fileName = FileHelper.validateAndSaveFile(part)
-                        }
-                        else -> part.dispose()
-                    }
+                    val response = service.addWardrobeItem(userId, request, null)
+                    call.respond(response)
+                } catch (e: Exception) {
+                    // Jika JSON tidak cocok, lari ke sini
+                    throw IllegalArgumentException("Format JSON baju tidak valid: ${e.message}")
                 }
-
-                val response = service.addWardrobeItem(userId, WardrobeRequest(name, category, color, description), fileName)
-                call.respond(response)
             }
 
             // 2. Daftar Baju (Paged & Filter)
@@ -65,7 +52,16 @@ fun Route.wardrobeRoutes(service: WardrobeService) {
                 call.respond(service.getDetail(id, userId))
             }
 
-            // 4. Hapus Baju
+            // 4. Update Baju
+            put("/{id}") {
+                val userId = SecurityHelper.extractUserId(call) ?: return@put call.respond(HttpStatusCode.Unauthorized)
+                val id = call.parameters["id"] ?: throw IllegalArgumentException("ID wajib diisi")
+                val request = call.receive<WardrobeRequest>()
+
+                call.respond(service.updateItem(id, userId, request, null))
+            }
+
+            // 5. Hapus Baju
             delete("/{id}") {
                 val userId = SecurityHelper.extractUserId(call) ?: return@delete call.respond(HttpStatusCode.Unauthorized)
                 val id = call.parameters["id"] ?: throw IllegalArgumentException("ID wajib diisi")

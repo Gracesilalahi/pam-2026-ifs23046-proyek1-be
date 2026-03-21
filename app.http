@@ -1,193 +1,138 @@
-## Global Variabel
-@BaseUrl = https://pam-2026-ifs23046-proyek1-be.s1if.life:8080/
-#@BaseUrl = http://127.0.0.1:8000
+## ========================================================================
+## GLOBAL VARIABLES
+## ========================================================================
+# Gunakan localhost untuk testing di laptop (paling stabil sekarang)
+#@BaseUrl = http://127.0.0.1:8080
 
-### ---------------------------------------
-## Auth
-### ---------------------------------------
+# Gunakan ini kalau deployment s1if.life kamu sudah tidak 502 lagi
+@BaseUrl = https://pam-2026-ifs23046-proyek1-be.s1if.life/
 
-### Melakukan pendaftaran
+### -----------------------------------------------------------------------
+## 1. AUTHENTICATION (Pintu Masuk)
+### -----------------------------------------------------------------------
+
+### A. Register - Buat akun baru
 # @name PostRegister
 POST {{BaseUrl}}/auth/register
 Content-Type: application/json
 
 {
-  "name": "grace",
-  "username": "grace",
-  "password": "grace"
+  "name": "Grace",
+  "username": "gess",
+  "password": "password123"
 }
 
-### Masuk ke layanan
+### B. Login - Ambil Token JWT
 # @name PostLogin
 POST {{BaseUrl}}/auth/login
 Content-Type: application/json
 
 {
-  "username": "grace",
-  "password": "grace"
+  "username": "j",
+  "password": "password123"
 }
 
 > {%
-    client.global.set("authToken", response.body.data.authToken);
+    // Penting: Kita simpan token ke memori HTTP Client biar gak copy-paste manual
+    client.global.set("authToken", response.body.data.token);
     client.global.set("refreshToken", response.body.data.refreshToken);
 %}
 
-### Keluar dari layanan (skip run)
-# @name PostLogout
-POST {{BaseUrl}}/auth/logout
-Content-Type: application/json
-
-{
-  "authToken": "{{authToken}}"
-}
-
-### Masuk ke layanan
+### C. Refresh Token - Jika token sudah expired
 # @name PostRefreshToken
 POST {{BaseUrl}}/auth/refresh-token
 Content-Type: application/json
 
 {
-  "authToken": "{{authToken}}",
+  "token": "{{authToken}}",
   "refreshToken": "{{refreshToken}}"
 }
 
-> {%
-    client.global.set("authToken", response.body.data.authToken);
-    client.global.set("refreshToken", response.body.data.refreshToken);
-%}
+### -----------------------------------------------------------------------
+## 2. USERS (Profil Pengguna)
+### -----------------------------------------------------------------------
 
-### ---------------------------------------
-## Users
-### ---------------------------------------
-
-### Mengambil informasi akun
+### A. Get My Profile
 # @name GetUserMe
 GET {{BaseUrl}}/users/me
 Authorization: Bearer {{authToken}}
 Content-Type: application/json
 
 > {%
+    // Simpan userId buat testing filter atau detail nanti
     client.global.set("userId", response.body.data.user.id);
 %}
 
-### Mengubah informasi akun
+### B. Update Profile
 # @name PutUserMe
 PUT {{BaseUrl}}/users/me
 Authorization: Bearer {{authToken}}
 Content-Type: application/json
 
 {
-  "name": "grace",
-  "username": "grace",
-  "about": "grace"
+  "name": "Grace Silalahi (Informatics Del)",
+  "username": "j",
+  "about": "Mahasiswi semester 6 yang akhirnya sukses build Ktor!"
 }
 
-### Mengubah kata sandi akun
-# @name PutUserMePassword
-PUT {{BaseUrl}}/users/me/password
+### -----------------------------------------------------------------------
+## 3. WARDROBE (Core CRUD - Poin Utama Proyek)
+### -----------------------------------------------------------------------
+
+### A. Create - Tambah Baju Baru
+# @name PostWardrobe
+POST {{BaseUrl}}/wardrobe
 Authorization: Bearer {{authToken}}
 Content-Type: application/json
 
 {
-  "newPassword": "grace",
-  "password": "grace"
-}
-
-### Mengubah photo profile
-# @name PutUserMePhoto
-PUT {{BaseUrl}}/users/me/photo
-Authorization: Bearer {{authToken}}
-Content-Type: multipart/form-data; boundary=WebAppBoundary
-
---WebAppBoundary
-Content-Disposition: form-data; name="file"; filename="example.png"
-Content-Type: image/png
-
-< ./uploads/examples/me.png
---WebAppBoundary--
-
-### Mengambil data tumbuhan berdasarkan id-nya
-#@userId = 00ed9d33-61b0-48b7-a32a-6510af028731
-
-# @name GetMyPhoto
-GET {{BaseUrl}}/images/users/{{userId}}
-Authorization: Bearer {{authToken}}
-Content-Type: application/json
-
-### ---------------------------------------
-## Todos
-### ---------------------------------------
-
-### Mengambil data todo dengan Pagination dan Filter
-# Parameter: page, perPage, is_finished (true/false), urgency (Low/Medium/High)
-# @name GetTodos
-GET {{BaseUrl}}/todos?page=1&perPage=10&is_finished=false&urgency=High&search=
-Authorization: Bearer {{authToken}}
-Content-Type: application/json
-
-### Menambahkan todo dengan Urgency
-# @name PostTodos
-POST {{BaseUrl}}/todos
-Authorization: Bearer {{authToken}}
-Content-Type: application/json
-
-{
-  "title": "Mengerjakan Praktikum PAM",
-  "description": "Menyelesaikan modul 5 authentication",
-  "urgency": "High"
+  "name": "Kemeja Flanel Biru",
+  "category": "TOP",
+  "color": "Biru Kotak-kotak",
+  "description": "Baju favorit buat praktikum PAM di lab"
 }
 
 > {%
-    // Script ini mengambil todoId dari response data dan menyimpannya ke variabel global
-    client.global.set("todoId", response.body.data.todoId);
+    // Simpan itemId baju yang baru dibuat buat ngetes Detail/Delete
+    client.global.set("itemId", response.body.data.id);
 %}
 
-### Mengambil todo dengan id
-# @name GetTodoById
-GET {{BaseUrl}}/todos/{{todoId}}
+### B. Read - Ambil Daftar Baju (Pagination & Search)
+# page: 1, perPage: 10, search: cari nama, category: TOP/BOTTOM/SHOES
+# @name GetWardrobes
+GET {{BaseUrl}}/wardrobe?page=1&perPage=10&search=&category=&sortBy=createdAt&order=desc
 Authorization: Bearer {{authToken}}
 Content-Type: application/json
 
-### Mengubah todo (termasuk status dan urgency)
-# @name PutTodo
-PUT {{BaseUrl}}/todos/{{todoId}}
+### C. Read - Ambil Detail Satu Baju
+# @name GetWardrobeById
+GET {{BaseUrl}}/wardrobe/{{itemId}}
+Authorization: Bearer {{authToken}}
+Content-Type: application/json
+
+### D. Update - Edit Data Baju
+# @name PutWardrobe
+PUT {{BaseUrl}}/wardrobe/{{itemId}}
 Authorization: Bearer {{authToken}}
 Content-Type: application/json
 
 {
-  "title": "Mengerjakan Praktikum PAM",
-  "description": "Menyelesaikan modul 5 authentication",
-  "urgency": "Medium",
-  "isDone": true
+  "name": "Kemeja Flanel Biru Del",
+  "category": "TOP",
+  "color": "Navy",
+  "description": "Sudah diupdate datanya"
 }
 
-### Mengubah cover todo
-# @name PutTodoCover
-PUT {{BaseUrl}}/todos/{{todoId}}/cover
-Authorization: Bearer {{authToken}}
-Content-Type: multipart/form-data; boundary=WebAppBoundary
-
---WebAppBoundary
-Content-Disposition: form-data; name="file"; filename="example.png"
-Content-Type: image/png
-
-< ./uploads/examples/me.png
---WebAppBoundary--
-
-### Mengambil statistik todo (Total, Selesai, Belum Selesai)
-# @name GetTodoStats
-GET {{BaseUrl}}/todos/stats
+### E. Delete - Hapus Baju dari Lemari
+# @name DeleteWardrobe
+DELETE {{BaseUrl}}/wardrobe/{{itemId}}
 Authorization: Bearer {{authToken}}
 Content-Type: application/json
 
-### Mengambil cover todo
-# @name GetTodoCover
-GET {{BaseUrl}}/images/todos/{{todoId}}
-Authorization: Bearer {{authToken}}
-Content-Type: application/json
+### -----------------------------------------------------------------------
+## 4. STATIC IMAGES
+### -----------------------------------------------------------------------
 
-### Menghapus todo
-# @name DeleteTodo
-DELETE {{BaseUrl}}/todos/{{todoId}}
+### Mengambil Gambar Baju
+GET {{BaseUrl}}/images/wardrobe/{{itemId}}
 Authorization: Bearer {{authToken}}
-Content-Type: application/json
