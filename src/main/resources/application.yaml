@@ -3,21 +3,21 @@ ktor:
     modules:
       - org.delcom.ApplicationKt.module
   deployment:
-    # Pakai 8080 sebagai default karena Nginx kamu nembak ke sini
-    port: ${APP_PORT:-8080}
-    host: ${APP_HOST:-0.0.0.0}
+    # Jangan pakai ${} di sini dulu biar IntelliJ/Server nggak pusing
+    port: 8080
+    host: 0.0.0.0
 
   database:
-    # Pakai 'db' sebagai default karena ini standar Docker di Lab
-    host: ${DB_HOST:-db}
-    port: ${DB_PORT:-5432}
-    name: ${DB_NAME:-db_pam_proyek1}
-    user: ${DB_USER:-postgres}
-    password: ${DB_PASSWORD:-postgres}
+    # Gunakan format ini untuk database
+    host: ${DB_HOST}
+    port: ${DB_PORT}
+    name: ${DB_NAME}
+    user: ${DB_USER}
+    password: ${DB_PASSWORD}
 
   jwt:
-    secret: ${JWT_SECRET:-"rahasia_grace_123_abc"}
-
-  app:
-    # URL server kamu
-    baseUrl: ${APP_URL:-"https://pam-2026-ifs23046-proyek1-be.s1if.life/"}
+    # Mengambil dari .env, kalau kosong pakai 'rahasia_grace_proyek1'
+    secret: "${JWT_SECRET:-rahasia_grace_proyek1}"
+    issuer: "${JWT_ISSUER:-https://pam-2026-ifs23046-proyek1-be.s1if.life/}"
+    audience: "${JWT_AUDIENCE:-https://pam-2026-ifs23046-proyek1-be.s1if.life/}"
+    realm: "Access to the wardrobe"
