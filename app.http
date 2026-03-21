@@ -5,7 +5,7 @@
 #@BaseUrl = http://127.0.0.1:8080
 
 # Gunakan ini kalau deployment s1if.life kamu sudah tidak 502 lagi
-@BaseUrl = https://pam-2026-ifs23046-proyek1-be.s1if.life:8080
+@BaseUrl = https://pam-2026-ifs23046-proyek1-be.s1if.life:8080/
 
 ### -----------------------------------------------------------------------
 ## 1. AUTHENTICATION (Pintu Masuk)
