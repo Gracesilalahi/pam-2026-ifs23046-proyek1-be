@@ -1,25 +1,23 @@
 ktor:
-  deployment:
-    port: ${APP_PORT:-8080}
-    host: ${APP_HOST:-0.0.0.0}
-
   application:
     modules:
       - org.delcom.ApplicationKt.module
+  deployment:
+    # Pakai 8080 sebagai default karena Nginx kamu nembak ke sini
+    port: ${APP_PORT:-8080}
+    host: ${APP_HOST:-0.0.0.0}
 
-  # Konfigurasi Database (Digunakan di configureDatabases)
   database:
-    # Pakai :-db agar kalau di server dia otomatis nyari container bernama 'db'
+    # Pakai 'db' sebagai default karena ini standar Docker di Lab
     host: ${DB_HOST:-db}
     port: ${DB_PORT:-5432}
     name: ${DB_NAME:-db_pam_proyek1}
     user: ${DB_USER:-postgres}
     password: ${DB_PASSWORD:-postgres}
 
-  # Konfigurasi JWT
   jwt:
-    # Ganti secret ini kalau mau lebih aman, tapi samakan dengan di .env
-    secret: ${JWT_SECRET:-rahasia_grace_123_abc}
-    issuer: ${JWT_ISSUER:-"http://0.0.0.0:8080/"}
-    audience: ${JWT_AUDIENCE:-"http://0.0.0.0:8080/"}
-    realm: ${JWT_REALM:-"Access to the wardrobe"}
+    secret: ${JWT_SECRET:-"rahasia_grace_123_abc"}
+
+  app:
+    # URL server kamu
+    baseUrl: ${APP_URL:-"https://pam-2026-ifs23046-proyek1-be.s1if.life/"}
