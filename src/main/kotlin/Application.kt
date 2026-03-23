@@ -24,30 +24,40 @@ import com.auth0.jwt.JWT
 import com.auth0.jwt.algorithms.Algorithm
 
 fun main(args: Array<String>) {
-    // 1. Perbaikan dotenv: ignoreIfMissing diset TRUE biar gak crash di server
     val dotenv = dotenv {
         directory = "."
         ignoreIfMissing = true
     }
-    dotenv.entries().forEach { System.setProperty(it.key, it.value) }
+
+    dotenv.entries().forEach { entry ->
+        // JANGAN ambil PORT dari .env kalau di server sudah ada variabel PORT
+        if (entry.key != "PORT") {
+            if (System.getenv(entry.key) == null && System.getProperty(entry.key) == null) {
+                System.setProperty(entry.key, entry.value)
+            }
+        }
+    }
 
     EngineMain.main(args)
 }
 
 fun Application.module() {
-    // 2. Ambil secret dari application.yaml, kalau gak ada baru pakai default
+    // Ambil JWT Secret dari application.yaml (fall-back ke hardcoded jika tidak ada)
     val jwtSecret = environment.config.propertyOrNull("ktor.jwt.secret")?.getString() ?: "rahasia_grace_123_abc"
 
+    // 1. PASANG KOIN TERLEBIH DAHULU
     install(Koin) {
         modules(appModule(jwtSecret))
     }
 
+    // 2. BARU AMBIL SERVICE (Inject)
     val authService by inject<AuthService>()
     val userService by inject<UserService>()
     val wardrobeService by inject<WardrobeService>()
 
     configureStatusPages()
 
+    // 3. KONFIGURASI AUTHENTICATION JWT
     install(Authentication) {
         jwt(JWTConstants.NAME) {
             realm = JWTConstants.REALM
@@ -62,22 +72,31 @@ fun Application.module() {
                 if (!userId.isNullOrBlank()) JWTPrincipal(credential.payload) else null
             }
             challenge { _, _ ->
-                call.respond(HttpStatusCode.Unauthorized, mapOf("status" to "error", "message" to "Token tidak valid"))
+                call.respond(
+                    HttpStatusCode.Unauthorized,
+                    mapOf("status" to "error", "message" to "Token tidak valid")
+                )
             }
         }
     }
 
+    // 4. KONFIGURASI CORS (Penting untuk Android/Web)
     install(CORS) {
         anyHost()
         allowHeader(HttpHeaders.ContentType)
         allowHeader(HttpHeaders.Authorization)
     }
 
+    // 5. KONFIGURASI JSON SERIALIZATION
     install(ContentNegotiation) {
-        json(Json { explicitNulls = false; prettyPrint = true; ignoreUnknownKeys = true })
+        json(Json {
+            explicitNulls = false
+            prettyPrint = true
+            ignoreUnknownKeys = true
+        })
     }
 
-    // 3. Pastikan urutan ini: DB dulu baru Routing
-    configureDatabases()
+    // 6. INISIALISASI DATABASE & ROUTING
+    configureDatabases() // Database status: CONNECTED akan muncul di sini
     configureRouting(authService, userService, wardrobeService)
 }
