@@ -3,9 +3,9 @@ ktor:
     modules:
       - org.delcom.ApplicationKt.module
   deployment:
-    # PERBAIKAN: Ganti :- jadi : agar tidak terbaca negatif
+    # Ini kuncinya! Pakai port dari server, kalau gak ada baru pakai 8080
     port: ${PORT:8080}
-    # Tetap gunakan 0.0.0.0 agar bisa diakses dari luar (Nginx/Android)
+    # WAJIB 0.0.0.0 agar bisa diakses oleh Nginx dan Android kamu nanti
     host: 0.0.0.0
 
   database:
@@ -16,7 +16,7 @@ ktor:
     password: ${DB_PASSWORD}
 
   jwt:
-    secret: "${JWT_SECRET:rahasia_grace_proyek1}"
+    secret: "${JWT_SECRET:rahasia_grace_123_abc}"
     issuer: "${JWT_ISSUER:https://pam-2026-ifs23046-proyek1-be.s1if.life/}"
     audience: "${JWT_AUDIENCE:https://pam-2026-ifs23046-proyek1-be.s1if.life/}"
     realm: "Access to the wardrobe"
