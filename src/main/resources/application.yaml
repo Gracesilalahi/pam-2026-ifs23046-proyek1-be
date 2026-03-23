@@ -3,12 +3,12 @@ ktor:
     modules:
       - org.delcom.ApplicationKt.module
   deployment:
-    # Jangan pakai ${} di sini dulu biar IntelliJ/Server nggak pusing
-    port: 8080
+    # PERBAIKAN: Ganti :- jadi : agar tidak terbaca negatif
+    port: ${PORT:8080}
+    # Tetap gunakan 0.0.0.0 agar bisa diakses dari luar (Nginx/Android)
     host: 0.0.0.0
 
   database:
-    # Gunakan format ini untuk database
     host: ${DB_HOST}
     port: ${DB_PORT}
     name: ${DB_NAME}
@@ -16,8 +16,7 @@ ktor:
     password: ${DB_PASSWORD}
 
   jwt:
-    # Mengambil dari .env, kalau kosong pakai 'rahasia_grace_proyek1'
-    secret: "${JWT_SECRET:-rahasia_grace_proyek1}"
-    issuer: "${JWT_ISSUER:-https://pam-2026-ifs23046-proyek1-be.s1if.life/}"
-    audience: "${JWT_AUDIENCE:-https://pam-2026-ifs23046-proyek1-be.s1if.life/}"
+    secret: "${JWT_SECRET:rahasia_grace_proyek1}"
+    issuer: "${JWT_ISSUER:https://pam-2026-ifs23046-proyek1-be.s1if.life/}"
+    audience: "${JWT_AUDIENCE:https://pam-2026-ifs23046-proyek1-be.s1if.life/}"
     realm: "Access to the wardrobe"

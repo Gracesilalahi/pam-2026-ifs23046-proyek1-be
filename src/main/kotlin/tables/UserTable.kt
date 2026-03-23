@@ -1,5 +1,6 @@
 package org.delcom.tables
 
+import kotlinx.datetime.Clock // Wajib di-import
 import org.jetbrains.exposed.dao.id.UUIDTable
 import org.jetbrains.exposed.sql.kotlin.datetime.timestamp
 
@@ -9,6 +10,8 @@ object UserTable : UUIDTable("users") {
     val password = varchar("password", 255)
     val photo = varchar("photo", 255).nullable()
     val about = text("about").nullable()
-    val createdAt = timestamp("created_at")
-    val updatedAt = timestamp("updated_at")
+
+    // Tambahkan .clientDefault { Clock.System.now() }
+    val createdAt = timestamp("created_at").clientDefault { Clock.System.now() }
+    val updatedAt = timestamp("updated_at").clientDefault { Clock.System.now() }
 }

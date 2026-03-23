@@ -24,23 +24,24 @@ import com.auth0.jwt.JWT
 import com.auth0.jwt.algorithms.Algorithm
 
 fun main(args: Array<String>) {
+    // 1. Perbaikan dotenv: ignoreIfMissing diset TRUE biar gak crash di server
     val dotenv = dotenv {
         directory = "."
-        ignoreIfMissing = false
+        ignoreIfMissing = true
     }
     dotenv.entries().forEach { System.setProperty(it.key, it.value) }
+
     EngineMain.main(args)
 }
 
 fun Application.module() {
-    val jwtSecret = "rahasia_grace_123_abc"
+    // 2. Ambil secret dari application.yaml, kalau gak ada baru pakai default
+    val jwtSecret = environment.config.propertyOrNull("ktor.jwt.secret")?.getString() ?: "rahasia_grace_123_abc"
 
-    // 1. PASANG KOIN TERLEBIH DAHULU
     install(Koin) {
         modules(appModule(jwtSecret))
     }
 
-    // 2. BARU AMBIL SERVICE (Inject)
     val authService by inject<AuthService>()
     val userService by inject<UserService>()
     val wardrobeService by inject<WardrobeService>()
@@ -76,6 +77,7 @@ fun Application.module() {
         json(Json { explicitNulls = false; prettyPrint = true; ignoreUnknownKeys = true })
     }
 
+    // 3. Pastikan urutan ini: DB dulu baru Routing
     configureDatabases()
     configureRouting(authService, userService, wardrobeService)
 }
